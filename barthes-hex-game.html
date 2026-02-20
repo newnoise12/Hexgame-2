@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Logic of Signs</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #06060f; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const CHAIN_GOAL = 6;
+const HAND_SIZE  = 6;
+const R          = 3;
+const SZ         = 50;
+const BW = 420, BH = 420, CX = BW/2, CY = BH/2;
+
+// ─── Three connection types ───────────────────────────────────────────────────
+const CONNECTION_TYPES = [
+  {
+    id:    "makes_inevitable",
+    label: "This makes that feel inevitable or necessary",
+    hint:  "The first concept gives the second its cultural weight or justification",
+    good:  [["values","practices"],["values","social"],["social","values"]],
+  },
+  {
+    id:    "expresses_performs",
+    label: "This is how that gets expressed or performed",
+    hint:  "The first concept is the visible enactment of the second",
+    good:  [["practices","values"],["practices","social"]],
+  },
+  {
+    id:    "creates_conditions",
+    label: "This creates the conditions for that to exist",
+    hint:  "The first concept is the structure or context that makes the second possible",
+    good:  [["social","practices"],["social","values"],["practices","social"]],
+  },
+];
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+const CATEGORIES = {
+  values:    { label:"Values",              color:"#C084FC", dark:"#7E22CE", letter:"V" },
+  practices: { label:"Practices & Rituals", color:"#34D399", dark:"#065F46", letter:"P" },
+  social:    { label:"Social Structures",   color:"#60A5FA", dark:"#1E3A8A", letter:"S" },
+};
+
+// ─── Signs ────────────────────────────────────────────────────────────────────
+const SIGNS = {
+  mms: {
+    id:"mms", label:"M&M's World", emoji:"🍬",
+    briefing:`The central myth of M&M's World is FALSE PERMANENCE and CORPORATE INTIMACY. The brand disguises its American, corporate, and recent origins by insisting on a pre-existing emotional relationship with the consumer. The characters don't ask to be liked — they assert they are already loved. The store's location in historic city centres performs rootedness while being a perfectly replicable non-place. The mythology removes all commercial logic and replaces it with the language of friendship, childhood memory, and belonging.
+
+STRONG CONNECTIONS: Innocence, Familiarity, Belonging, Nostalgia, Fun (values the myth produces) · Gift-Giving, Childhood Play, Tourism, Collecting, The Souvenir (rituals the brand embeds itself in) · The Family, Global Capital, The Franchise, The High Street, Americanisation (structures naturalised).
+CONDITIONAL: Global Capital — only accept if chain has established the brand's corporate disguise logic.
+REJECT: The Selfie (self-curation not corporate belonging — WRONG REGISTER) · Consumer Culture (names what the myth hides — TOO ANALYTICAL) · anything from body, labour, technology, or endurance registers.
+CHAIN: Must remain an argument about how a corporate brand presents itself as a permanent cultural fixture. If tiles drift toward individual identity, labour, the body, or technology, the chain has broken.`,
+    tiles:[
+      {id:"mms-innocence",    label:"Innocence",      category:"values"},
+      {id:"mms-familiarity",  label:"Familiarity",    category:"values"},
+      {id:"mms-belonging",    label:"Belonging",      category:"values"},
+      {id:"mms-nostalgia",    label:"Nostalgia",      category:"values"},
+      {id:"mms-fun",          label:"Fun",            category:"values"},
+      {id:"mms-gift",         label:"Gift-Giving",    category:"practices"},
+      {id:"mms-play",         label:"Childhood Play", category:"practices"},
+      {id:"mms-tourism",      label:"Tourism",        category:"practices"},
+      {id:"mms-collecting",   label:"Collecting",     category:"practices"},
+      {id:"mms-souvenir",     label:"The Souvenir",   category:"practices"},
+      {id:"mms-family",       label:"The Family",     category:"social"},
+      {id:"mms-capital",      label:"Global Capital", category:"social"},
+      {id:"mms-franchise",    label:"The Franchise",  category:"social"},
+      {id:"mms-highstreet",   label:"The High Street",category:"social"},
+      {id:"mms-america",      label:"Americanisation",category:"social"},
+      {id:"mms-trap-selfie",  label:"The Selfie",     category:"practices",trap:true,trapReason:"The Selfie is about presenting yourself — not about a brand pretending it has always been part of your life."},
+      {id:"mms-trap-consumer",label:"Consumer Culture",category:"social",trap:true,trapReason:"Consumer Culture is an analytical label for the very thing the myth is hiding — placing it breaks the spell rather than extending it."},
+      {id:"mms-trap-hustle",  label:"Hustle Culture", category:"practices",trap:true,trapReason:"Hustle Culture belongs to the world of work and endurance — completely different from M&M's mythology of childhood and belonging."},
+    ],
+  },
+
+  coffee: {
+    id:"coffee", label:"Artisan Coffee", emoji:"☕",
+    briefing:`The central myth of Artisan Coffee is URBAN DISTINCTION PRESENTED AS TASTE. The artisan coffee shop performs craft within an industrial process, using the language of authenticity to make class difference look like a matter of personal discernment. The urban class presents its own pace, intelligence, and taste as natural qualities rather than products of economic and geographical privilege. The milk heart resolves the industrial into the personal.
+
+STRONG CONNECTIONS: Authenticity, Intelligence, Refinement, Taste, Discernment (values) · The Morning Routine, Networking, Working From Home, The Coffee Date, Craft (practices) · The Urban Class, Gentrification, The Creative Industries, The High Street, Social Distinction (social structures).
+REJECT: Hustle Culture (endurance not discernment — wrong class register) · Youth Culture (coffee mythologises maturity not youth) · The Workout (body not mind) · Night Shift, Zero Hours (labour precarity register — wrong world entirely).
+CHAIN: Must remain an argument about how urban middle-class identity presents itself as simply a matter of taste and culture.`,
+    tiles:[
+      {id:"cof-authenticity",  label:"Authenticity",        category:"values"},
+      {id:"cof-intelligence",  label:"Intelligence",        category:"values"},
+      {id:"cof-refinement",    label:"Refinement",          category:"values"},
+      {id:"cof-taste",         label:"Taste",               category:"values"},
+      {id:"cof-discernment",   label:"Discernment",         category:"values"},
+      {id:"cof-morning",       label:"The Morning Routine", category:"practices"},
+      {id:"cof-networking",    label:"Networking",          category:"practices"},
+      {id:"cof-wfh",           label:"Working From Home",   category:"practices"},
+      {id:"cof-date",          label:"The Coffee Date",     category:"practices"},
+      {id:"cof-craft",         label:"Craft",               category:"practices"},
+      {id:"cof-urban",         label:"The Urban Class",     category:"social"},
+      {id:"cof-gentrification",label:"Gentrification",      category:"social"},
+      {id:"cof-creative",      label:"The Creative Industries",category:"social"},
+      {id:"cof-highstreet",    label:"The High Street",     category:"social"},
+      {id:"cof-distinction",   label:"Social Distinction",  category:"social"},
+      {id:"cof-trap-hustle",   label:"Hustle Culture",      category:"practices",trap:true,trapReason:"Hustle Culture is about grinding through exhaustion — the opposite of artisan coffee's image of calm, discerning urbanity."},
+      {id:"cof-trap-youth",    label:"Youth Culture",       category:"social",   trap:true,trapReason:"Artisan coffee positions itself as mature and discerning — Youth Culture belongs to a completely different register."},
+      {id:"cof-trap-workout",  label:"The Workout",         category:"practices",trap:true,trapReason:"The Workout is about transforming the body — artisan coffee mythology is about the mind and social distinction."},
+    ],
+  },
+
+  energy: {
+    id:"energy", label:"Energy Drinks", emoji:"⚡",
+    briefing:`The central myth of Energy Drinks is INDIVIDUAL ENDURANCE AS HEROISM. The energy drink presents the erosion of working protections as a site of personal performance — exhaustion becomes prowess. The brutalist branding fills the spaces coffee won't, aligning with extreme sports and gaming to reframe what is structurally a proletarian fuel for a fragmenting labour market as individual achievement.
+
+STRONG CONNECTIONS: Endurance, Strength, Intensity, Performance, Excess (values) · The Night Shift, Extreme Sports, Gaming, Hustle Culture, The Gig Economy (practices) · The Working Class, Flexible Working, Zero Hours, Masculinity, Youth Culture (social structures).
+REJECT: The Coffee Date (sociable and refined — entirely wrong register) · Self-Improvement (aspiration toward a better self — that belongs to the Gym) · The Creative Industries, Networking (artisan coffee's world — wrong class entirely) · Craft, Refinement, Discernment.
+CHAIN: Must remain an argument about how exhaustion and precarious labour get reframed as individual strength.`,
+    tiles:[
+      {id:"egy-endurance",    label:"Endurance",       category:"values"},
+      {id:"egy-strength",     label:"Strength",        category:"values"},
+      {id:"egy-intensity",    label:"Intensity",       category:"values"},
+      {id:"egy-performance",  label:"Performance",     category:"values"},
+      {id:"egy-excess",       label:"Excess",          category:"values"},
+      {id:"egy-nightshift",   label:"The Night Shift", category:"practices"},
+      {id:"egy-sport",        label:"Extreme Sports",  category:"practices"},
+      {id:"egy-gaming",       label:"Gaming",          category:"practices"},
+      {id:"egy-hustle",       label:"Hustle Culture",  category:"practices"},
+      {id:"egy-gig",          label:"The Gig Economy", category:"practices"},
+      {id:"egy-working",      label:"The Working Class",category:"social"},
+      {id:"egy-flexible",     label:"Flexible Working",category:"social"},
+      {id:"egy-zerohours",    label:"Zero Hours",      category:"social"},
+      {id:"egy-masculinity",  label:"Masculinity",     category:"social"},
+      {id:"egy-youth",        label:"Youth Culture",   category:"social"},
+      {id:"egy-trap-date",    label:"The Coffee Date", category:"practices",trap:true,trapReason:"The Coffee Date belongs to the world of artisan coffee — sociable, refined, and urban. Completely the wrong register for energy drink mythology."},
+      {id:"egy-trap-self",    label:"Self-Improvement",category:"values",   trap:true,trapReason:"Energy drinks are about pushing through exhaustion — not becoming a better version of yourself. That mythology belongs to the Gym."},
+      {id:"egy-trap-creative",label:"The Creative Industries",category:"social",trap:true,trapReason:"The Creative Industries belong to artisan coffee's urban professional world — the wrong class register for energy drink mythology entirely."},
+    ],
+  },
+
+  iphone: {
+    id:"iphone", label:"iPhone", emoji:"📱",
+    briefing:`The central myth of the iPhone is THE SELF MADE PERFECT THROUGH THE PERFECT OBJECT. Like Barthes' analysis of the new Citroën — a car presented as if it had fallen from another world, something discovered rather than manufactured — the iPhone presents itself as an inevitability rather than a product. Its design (seamless, minimal, intuitive) hides its industrial origins, surveillance infrastructure, and planned obsolescence behind the language of purity. The product launch is a secular ceremony; the unboxing a ritual of initiation.
+
+STRONG CONNECTIONS: Perfection, Simplicity, Elegance, Modernity, Aspiration (values) · The Upgrade Cycle, The Unboxing, The Product Launch, Photography, Self-Curation (practices) · Consumer Culture, Silicon Valley, The Creative Class (social structures).
+CONDITIONAL: Surveillance and Planned Obsolescence — only accept if chain has established the myth's concealment logic.
+REJECT: The Night Shift (wrong register entirely) · The Workout (co-presence not mythological connection) · anything from endurance, labour precarity, or physical performance registers.
+CHAIN: Must remain an argument about how a consumer device presents itself as an expression of the self rather than a commercial product.`,
+    tiles:[
+      {id:"iph-perfection",  label:"Perfection",          category:"values"},
+      {id:"iph-simplicity",  label:"Simplicity",          category:"values"},
+      {id:"iph-elegance",    label:"Elegance",            category:"values"},
+      {id:"iph-modernity",   label:"Modernity",           category:"values"},
+      {id:"iph-aspiration",  label:"Aspiration",          category:"values"},
+      {id:"iph-upgrade",     label:"The Upgrade Cycle",   category:"practices"},
+      {id:"iph-unboxing",    label:"The Unboxing",        category:"practices"},
+      {id:"iph-launch",      label:"The Product Launch",  category:"practices"},
+      {id:"iph-photography", label:"Photography",         category:"practices"},
+      {id:"iph-curation",    label:"Self-Curation",       category:"practices"},
+      {id:"iph-consumer",    label:"Consumer Culture",    category:"social"},
+      {id:"iph-silicon",     label:"Silicon Valley",      category:"social"},
+      {id:"iph-creative",    label:"The Creative Class",  category:"social"},
+      {id:"iph-surveillance",label:"Surveillance",        category:"social"},
+      {id:"iph-obsolescence",label:"Planned Obsolescence",category:"social"},
+      {id:"iph-trap-night",  label:"The Night Shift",     category:"practices",trap:true,trapReason:"Phones are used at night but The Night Shift belongs to energy drink mythology of labour endurance — a completely different world from the iPhone's image of elegant selfhood."},
+      {id:"iph-trap-workout",label:"The Workout",         category:"practices",trap:true,trapReason:"iPhones appear during workouts but the connection is circumstantial — The Workout's mythology is about the body as project, not the self expressed through a perfect object."},
+      {id:"iph-trap-tourism",label:"Tourism",             category:"practices",trap:true,trapReason:"Tourism is a context where iPhones appear but it belongs to M&M's World mythology of place and belonging — a different register entirely."},
+    ],
+  },
+
+  gym: {
+    id:"gym", label:"The Gym", emoji:"🏋️",
+    briefing:`The central myth of The Gym is THE BODY AS A PROJECT OF THE WILL. The gym presents the idea that the body is raw material that requires conscious improvement — the untransformed body appears as a problem to be solved. This mythology is shaped by gender and by consumer culture, which provides the supplements, clothing, equipment, and tracking technologies through which the project is pursued. The Before & After is the myth's signature: transformation as both possible and morally necessary.
+
+STRONG CONNECTIONS: Self-Improvement, Discipline, Health, Willpower, Transformation (values) · The Workout, Tracking & Measuring, The Before & After, Dieting, The Selfie (practices) · The Body as Project, Wellness Industry, Masculinity, Femininity, Consumer Culture (social structures).
+CONDITIONAL: The Upgrade Cycle — only accept if chain has established the body as a kind of consumer technology.
+REJECT: Networking (individual transformation not social capital) · Tourism (no register connection) · The Morning Routine (this belongs to artisan coffee — mind not body) · anything from urban distinction, taste, intellectual labour, or labour precarity registers.
+CHAIN: Must remain an argument about how the body is presented as a site of individual moral effort and consumer investment.`,
+    tiles:[
+      {id:"gym-improvement",   label:"Self-Improvement",    category:"values"},
+      {id:"gym-discipline",    label:"Discipline",          category:"values"},
+      {id:"gym-health",        label:"Health",              category:"values"},
+      {id:"gym-willpower",     label:"Willpower",           category:"values"},
+      {id:"gym-transformation",label:"Transformation",      category:"values"},
+      {id:"gym-workout",       label:"The Workout",         category:"practices"},
+      {id:"gym-tracking",      label:"Tracking & Measuring",category:"practices"},
+      {id:"gym-before",        label:"The Before & After",  category:"practices"},
+      {id:"gym-dieting",       label:"Dieting",             category:"practices"},
+      {id:"gym-selfie",        label:"The Selfie",          category:"practices"},
+      {id:"gym-project",       label:"The Body as Project", category:"social"},
+      {id:"gym-wellness",      label:"Wellness Industry",   category:"social"},
+      {id:"gym-masculinity",   label:"Masculinity",         category:"social"},
+      {id:"gym-femininity",    label:"Femininity",          category:"social"},
+      {id:"gym-consumer",      label:"Consumer Culture",    category:"social"},
+      {id:"gym-trap-network",  label:"Networking",          category:"practices",trap:true,trapReason:"Gyms are social spaces but their mythology is about individual transformation — Networking belongs to artisan coffee's world of social capital and urban connection."},
+      {id:"gym-trap-morning",  label:"The Morning Routine", category:"practices",trap:true,trapReason:"The Morning Routine belongs to artisan coffee mythology — it is about the productive mind. The Gym mythology is specifically about the body as a project."},
+      {id:"gym-trap-zerohours",label:"Zero Hours",          category:"social",   trap:true,trapReason:"Zero Hours belongs to energy drink mythology of labour precarity — the Gym mythology is about individual moral effort and consumer investment, not structural working conditions."},
+    ],
+  },
+};
+
+const SIGN_LIST = Object.values(SIGNS);
+
+// ─── Rejection types ──────────────────────────────────────────────────────────
+const REJECTION_TYPES = {
+  wrong_register:   {label:"Wrong Register",     color:"#F59E0B",icon:"⚡"},
+  too_literal:      {label:"Too Literal",         color:"#EF4444",icon:"📐"},
+  too_abstract:     {label:"Too Analytical",      color:"#8B5CF6",icon:"🌫"},
+  breaks_chain:     {label:"Breaks Chain Logic",  color:"#EC4899",icon:"🔗"},
+  not_mythological: {label:"Doesn't Fit",         color:"#6B7280",icon:"🚫"},
+};
+
+// ─── Hex geometry ─────────────────────────────────────────────────────────────
+function hexToPixel(q,r){return{x:SZ*1.5*q,y:SZ*(Math.sqrt(3)/2*q+Math.sqrt(3)*r)};}
+function getNeighbors(q,r){return[[q+1,r],[q-1,r],[q,r+1],[q,r-1],[q+1,r-1],[q-1,r+1]];}
+function isInGrid(q,r){return Math.abs(q)<=R&&Math.abs(r)<=R&&Math.abs(q+r)<=R;}
+function hexDistance(q,r){return(Math.abs(q)+Math.abs(r)+Math.abs(q+r))/2;}
+function hexPts(cx,cy,s){
+  return Array.from({length:6},(_,i)=>{
+    const a=(Math.PI/180)*(60*i);
+    return`${cx+s*Math.cos(a)},${cy+s*Math.sin(a)}`;
+  }).join(" ");
+}
+
+// ─── BFS: shortest path from origin through placed tiles ─────────────────────
+function buildChainPath(targetKey,placed){
+  if(targetKey==="0,0")return[];
+  const queue=[["0,0",["0,0"]]];
+  const visited=new Set(["0,0"]);
+  while(queue.length){
+    const[cur,path]=queue.shift();
+    const[q,r]=cur.split(",").map(Number);
+    for(const[nq,nr]of getNeighbors(q,r)){
+      const nk=`${nq},${nr}`;
+      if(visited.has(nk))continue;
+      if(!placed[nk]&&nk!==targetKey)continue;
+      visited.add(nk);
+      const np=[...path,nk];
+      if(nk===targetKey)return np.slice(0,-1);
+      if(placed[nk])queue.push([nk,np]);
+    }
+  }
+  return["0,0"];
+}
+
+// ─── Deepest chain for display ────────────────────────────────────────────────
+function getDeepestChain(placed){
+  let deepest=null,maxD=0;
+  for(const[key,tile]of Object.entries(placed)){
+    if(tile.isStart)continue;
+    if((tile.depth||0)>maxD){maxD=tile.depth||0;deepest=key;}
+  }
+  if(!deepest)return["0,0"];
+  return[...buildChainPath(deepest,placed),deepest];
+}
+
+// ─── Category rules ───────────────────────────────────────────────────────────
+function categoryCompatible(cat,neighbours){
+  for(const t of neighbours){if(t.isStart)continue;if(t.category===cat)return false;}
+  return true;
+}
+function legalCategories(neighbours){
+  const blocked=new Set(neighbours.filter(t=>!t.isStart).map(t=>t.category));
+  return Object.keys(CATEGORIES).filter(c=>!blocked.has(c));
+}
+
+// ─── Connection type appropriateness bonus ────────────────────────────────────
+function connectionTypeBonus(connId,candidateCat,neighbourCats){
+  const ct=CONNECTION_TYPES.find(c=>c.id===connId);
+  if(!ct)return 0;
+  for(const nCat of neighbourCats){
+    for(const[a,b]of ct.good){
+      if((a===candidateCat&&b===nCat)||(a===nCat&&b===candidateCat))return 12;
+    }
+  }
+  return -8;
+}
+
+// ─── AI evaluation ────────────────────────────────────────────────────────────
+async function evaluateConnection({sign,chainPath,neighbours,candidate,adjCount,candidateTile,connType,studentReasoning}){
+  const threshold=adjCount>=3?75:adjCount===2?65:55;
+  const pathStr=chainPath.length?chainPath.join(" → "):`${sign.label} (origin)`;
+  const neighStr=neighbours.join(" AND ");
+  const ct=CONNECTION_TYPES.find(c=>c.id===connType);
+  const candidateCatLabel=candidateTile?.category?CATEGORIES[candidateTile.category]?.label||candidateTile.category:"unknown";
+  const trapHint=candidateTile?.trap
+    ?`\n\nNOTE — TRAP TILE: This tile is known to be problematic for this sign. Likely failure reason: "${candidateTile.trapReason}". Be especially rigorous.`:"";
+
+  const prompt=`You are a rigorous but approachable critic in an educational game about cultural meaning, designed for undergraduate students who are new to semiotics. Your job is to evaluate whether a student's tile placement makes cultural sense. Your default is to REJECT — only accept connections that genuinely extend the argument.
+
+SIGN BEING ANALYSED: "${sign.label}"
+
+BRIEFING — what this sign's cultural mythology is about:
+${sign.briefing}
+${trapHint}
+
+CURRENT STATE:
+- Chain built so far: ${pathStr}
+- Tile being placed: "${candidate}"
+- Adjacent tiles on the board: ${neighStr}
+- Number of adjacent tiles: ${adjCount} (passing threshold: ${threshold}/100)
+
+STUDENT'S EXPLANATION:
+- Relationship type chosen: "${ct?.label}" (meaning: ${ct?.hint})
+- Student's own words: "${studentReasoning||"(not provided)"}"
+
+EVALUATE whether "${candidate}" works here. Check ALL THREE:
+
+1. LOCAL CONNECTION — does "${candidate}" connect culturally to each adjacent tile (${neighStr})? Not just a surface association — is there a genuine shared cultural meaning or logic? Consult the briefing's REJECT list.
+
+2. CHAIN COHERENCE — does "${candidate}" fit the direction of the chain so far (${pathStr})? Or does it pull the argument into a different cultural world?
+
+3. STAYS ABOUT THE SIGN — does this tile keep the chain as an argument about "${sign.label}"? If you placed this tile in an essay about "${sign.label}", would it make sense?
+
+ALSO EVALUATE THE STUDENT'S REASONING:
+- Did they choose a relationship type that makes sense for the categories involved?
+- Do their own words show they understand why these concepts connect culturally — or are they just describing surface proximity?
+- Superficial reasoning (e.g. "they both involve exercise") should score lower than cultural reasoning (e.g. "Discipline frames the workout as a moral obligation rather than a choice").
+
+Score the CONNECTION (0-100) and the REASONING (0-100) separately.
+Poor reasoning (below 50) reduces the final score by up to 15 points but does NOT make an otherwise valid tile invalid.
+
+Write feedback in plain, encouraging language — no jargon. If rejecting, be specific about which of the three conditions failed and why, in terms a first-year student would understand.
+
+Classify any rejection: "wrong_register"|"too_literal"|"too_abstract"|"breaks_chain"|"not_mythological"
+
+Respond ONLY in valid JSON:
+{
+  "connectionScore": <0-100>,
+  "reasoningScore": <0-100>,
+  "valid": <true only if connectionScore >= ${threshold}>,
+  "briefFeedback": "<1 sentence ≤25 words — what worked or specifically why it fails>",
+  "reasoningFeedback": "<1 sentence ≤25 words — quality of reasoning, what to think more carefully about>",
+  "barthesLink": "<1 accessible sentence connecting to a Barthes idea, ≤30 words>",
+  "rejectionType": "<key or null if valid>"
+}`;
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:500,
+        messages:[{role:"user",content:prompt}],
+      }),
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||"";
+    const clean=text.replace(/```json|```/g,"").trim();
+    const p=JSON.parse(clean);
+    p.valid=p.connectionScore>=threshold;
+    const reasonMod=p.reasoningScore>=75?5:p.reasoningScore>=50?0:-15;
+    p.finalScore=Math.max(0,Math.min(100,(p.connectionScore||0)+reasonMod));
+    return{...p,threshold};
+  }catch{
+    return{
+      connectionScore:30,reasoningScore:0,valid:false,threshold,finalScore:30,
+      briefFeedback:"Evaluation failed — try another tile.",
+      reasoningFeedback:"Could not evaluate reasoning.",
+      barthesLink:"Signs take on meaning through the cultural systems they belong to.",
+      rejectionType:"not_mythological",
+    };
+  }
+}
+
+// ─── Hand builder ─────────────────────────────────────────────────────────────
+function buildHand(sign,usedIds){
+  const avail=sign.tiles.filter(w=>!usedIds.has(w.id));
+  const shuffled=[...avail].sort(()=>Math.random()-0.5);
+  const traps=shuffled.filter(w=>w.trap).slice(0,2);
+  const safe=shuffled.filter(w=>!w.trap);
+  const hand=[];
+  for(const cat of Object.keys(CATEGORIES)){
+    const m=safe.find(w=>w.category===cat&&!hand.find(h=>h.id===w.id));
+    if(m)hand.push(m);
+  }
+  for(const w of safe){
+    if(hand.length>=HAND_SIZE-2)break;
+    if(!hand.find(h=>h.id===w.id))hand.push(w);
+  }
+  for(const t of traps){
+    if(hand.length>=HAND_SIZE)break;
+    if(!hand.find(h=>h.id===t.id))hand.push(t);
+  }
+  return hand.slice(0,HAND_SIZE).sort(()=>Math.random()-0.5);
+}
+
+// ─── All hexes ────────────────────────────────────────────────────────────────
+const ALL_HEXES=[];
+for(let q=-R;q<=R;q++)for(let r=-R;r<=R;r++)if(isInGrid(q,r))ALL_HEXES.push([q,r]);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+export default function BarthesGame(){
+  const[phase,setPhase]         =useState("intro");
+  const[sign,setSign]           =useState(null);
+  const[placed,setPlaced]       =useState({});
+  const[hand,setHand]           =useState([]);
+  const[selected,setSelected]   =useState(null);
+  const[pendingHex,setPendingHex]=useState(null);
+  const[connType,setConnType]   =useState(null);
+  const[reasoning,setReasoning] =useState("");
+  const[feedback,setFeedback]   =useState(null);
+  const[evaluating,setEvaluating]=useState(false);
+  const[score,setScore]         =useState(0);
+  const[accepted,setAccepted]   =useState(0);
+  const[rejected,setRejected]   =useState(0);
+  const[usedIds,setUsedIds]     =useState(new Set());
+  const[activeCat,setActiveCat] =useState(null);
+  const[maxDepth,setMaxDepth]   =useState(0);
+  const svgRef=useRef(null);
+
+  function startGame(chosenSign){
+    const used=new Set([chosenSign.id]);
+    setSign(chosenSign);
+    setPlaced({"0,0":{...chosenSign,isStart:true,depth:0}});
+    setUsedIds(used);
+    setScore(0);setAccepted(0);setRejected(0);setMaxDepth(0);
+    setFeedback(null);setSelected(null);setPendingHex(null);
+    setConnType(null);setReasoning("");
+    setHand(buildHand(chosenSign,used));
+    setPhase("playing");
+  }
+
+  function getAvailable(){
+    const pSet=new Set(Object.keys(placed));
+    const seen=new Set();
+    const res=[];
+    for(const key of pSet){
+      const[q,r]=key.split(",").map(Number);
+      for(const[nq,nr]of getNeighbors(q,r)){
+        const nk=`${nq},${nr}`;
+        if(!pSet.has(nk)&&isInGrid(nq,nr)&&!seen.has(nk)){
+          seen.add(nk);
+          const adjTiles=getNeighbors(nq,nr)
+            .filter(([aq,ar])=>pSet.has(`${aq},${ar}`))
+            .map(([aq,ar])=>placed[`${aq},${ar}`]);
+          const depth=Math.min(...adjTiles.map(t=>t.depth??0))+1;
+          const legal=legalCategories(adjTiles);
+          res.push({q:nq,r:nr,key:nk,adjTiles,depth,legalCats:legal});
+        }
+      }
+    }
+    return res;
+  }
+
+  function onHexClick(hexInfo){
+    if(!selected||evaluating||phase!=="playing")return;
+    if(!categoryCompatible(selected.category,hexInfo.adjTiles)){
+      setFeedback({
+        valid:false,blocked:true,
+        briefFeedback:`A ${CATEGORIES[selected.category].label} tile can't go next to another ${CATEGORIES[selected.category].label} tile — cultural meaning moves by crossing between registers.`,
+        barthesLink:"Signs produce meaning by entering into relationships with signs from different registers.",
+        rejectionType:null,threshold:null,
+      });
+      return;
+    }
+    setPendingHex(hexInfo);
+    setConnType(null);setReasoning("");setFeedback(null);
+  }
+
+  async function submitConnection(){
+    if(!pendingHex||!connType||evaluating||!selected)return;
+    setEvaluating(true);
+
+    // Snapshot all mutable closure values before any setState calls
+    const snapTile     = selected;
+    const snapHex      = pendingHex;
+    const snapCt       = connType;
+    const snapReason   = reasoning;
+    const snapPlaced   = placed;
+    const snapUsed     = usedIds;
+    const snapDepth    = maxDepth;
+
+    const pathKeys=buildChainPath(snapHex.key,snapPlaced);
+    const chainPath=pathKeys.map(k=>snapPlaced[k]?.label||snapPlaced[k]?.id||k);
+    const neighbourCats=snapHex.adjTiles.filter(t=>!t.isStart).map(t=>t.category);
+    const ctBonus=connectionTypeBonus(snapCt,snapTile.category,neighbourCats);
+
+    const result=await evaluateConnection({
+      sign,chainPath,
+      neighbours:snapHex.adjTiles.map(t=>t.label||t.id),
+      candidate:snapTile.label,
+      adjCount:snapHex.adjTiles.length,
+      candidateTile:snapTile,
+      connType:snapCt,
+      studentReasoning:snapReason,
+    });
+
+    if(result.valid){
+      const pts=Math.max(0,result.finalScore+ctBonus);
+      const newTile={...snapTile,evalScore:pts,depth:snapHex.depth,connType:snapCt};
+      const newPlaced={...snapPlaced,[snapHex.key]:newTile};
+      const newUsed=new Set([...snapUsed,snapTile.id]);
+      const newDepth=Math.max(snapDepth,snapHex.depth);
+      setPlaced(newPlaced);setUsedIds(newUsed);
+      setScore(s=>s+pts);setAccepted(a=>a+1);
+      setMaxDepth(newDepth);setSelected(null);setPendingHex(null);
+      setHand(buildHand(sign,newUsed));
+      if(newDepth>=CHAIN_GOAL)setPhase("complete");
+    }else{
+      setRejected(r=>r+1);
+      setHand(prev=>prev.filter(w=>w.id!==snapTile.id));
+      setSelected(null);setPendingHex(null);
+    }
+
+    setFeedback({
+      ...result,
+      finalPts:Math.max(0,result.finalScore+ctBonus),
+      ctBonus,
+      wasTrap:snapTile.trap,
+    });
+    setEvaluating(false);
+  }
+
+  function cancelPending(){setPendingHex(null);setConnType(null);setReasoning("");}
+
+  const available=phase==="playing"?getAvailable():[];
+  const availableMap=new Map(available.map(h=>[h.key,h]));
+  const deepChainKeys=new Set(getDeepestChain(placed));
+  const deepChainArr=getDeepestChain(placed);
+  const chainLabel=deepChainArr.map(k=>placed[k]?.label||"?").join(" → ");
+
+  function hexLegalForSelected(hi){
+    if(!selected)return true;
+    return categoryCompatible(selected.category,hi.adjTiles);
+  }
+
+  function depthColour(d){
+    const t=Math.min(d/CHAIN_GOAL,1);
+    return`rgb(${Math.round(192+t*59)},${Math.round(132+t*14)},${Math.round(252-t*192)})`;
+  }
+
+  // ─── SVG chain lines ────────────────────────────────────────────────────────
+  function renderChainLines(){
+    const arr=deepChainArr;
+    if(arr.length<2)return null;
+    return arr.slice(0,-1).map((key,i)=>{
+      const[q1,r1]=key.split(",").map(Number);
+      const[q2,r2]=arr[i+1].split(",").map(Number);
+      const p1=hexToPixel(q1,r1),p2=hexToPixel(q2,r2);
+      return<line key={`cl-${i}`}
+        x1={CX+p1.x} y1={CY+p1.y} x2={CX+p2.x} y2={CY+p2.y}
+        stroke="#FFD700" strokeWidth={2} opacity={0.3} strokeDasharray="6 3"/>;
+    });
+  }
+
+  // ─── Render hex ─────────────────────────────────────────────────────────────
+  function renderHex(q,r){
+    const{x,y}=hexToPixel(q,r);
+    const px=CX+x,py=CY+y;
+    const key=`${q},${r}`;
+    const tile=placed[key];
+    const hi=availableMap.get(key);
+    const isAvail=!!hi&&!!selected&&!evaluating&&!pendingHex;
+    const adjN=hi?.adjTiles?.length??0;
+    const isLegal=isAvail&&hexLegalForSelected(hi);
+    const isPending=pendingHex?.key===key;
+    const isOnChain=deepChainKeys.has(key)&&tile&&!tile.isStart;
+    const glowC=adjN>=3?"#EF4444":adjN===2?"#FB923C":"#60A5FA";
+    const dist=hexDistance(q,r);
+
+    let fill="#07070e",stroke="rgba(255,255,255,0.06)",sw=1;
+    if(tile?.isStart)         {fill="#1a0d2e";stroke="#C084FC";sw=2;}
+    else if(isPending)        {fill="rgba(255,215,0,0.12)";stroke="#FFD700";sw=2;}
+    else if(isOnChain)        {fill="rgba(255,215,0,0.05)";stroke=depthColour(tile.depth||0);sw=2;}
+    else if(tile)             {fill="rgba(255,255,255,0.03)";stroke=depthColour(tile.depth||0);sw=1.5;}
+    else if(isAvail&&isLegal) {fill=`${glowC}18`;stroke=glowC;sw=1.5;}
+    else if(isAvail&&!isLegal){fill="rgba(239,68,68,0.04)";stroke="rgba(239,68,68,0.18)";sw=1;}
+
+    return(
+      <g key={key} onClick={()=>isAvail&&isLegal&&onHexClick(hi)}
+        style={{cursor:isAvail&&isLegal?"pointer":isAvail?"not-allowed":"default"}}>
+        <polygon points={hexPts(px,py,SZ-2)} fill={fill} stroke={stroke} strokeWidth={sw}/>
+        {!tile&&dist===CHAIN_GOAL&&(
+          <polygon points={hexPts(px,py,SZ-2)} fill="none"
+            stroke="#FFD700" strokeWidth={0.8} strokeDasharray="5 3" opacity={0.45}/>
+        )}
+        {isAvail&&!tile&&(
+          <text x={px} y={py+23} textAnchor="middle" fontSize={7}
+            fontFamily="'Space Mono',monospace"
+            fill={isLegal?glowC:"#EF4444"} opacity={isLegal?0.5:0.2}>
+            {isLegal?hi.legalCats.map(c=>CATEGORIES[c].letter).join(" "):"✕ "+CATEGORIES[selected?.category]?.letter}
+          </text>
+        )}
+        {tile&&(
+          <>
+            {tile.emoji&&<text x={px} y={py-10} textAnchor="middle"
+              fontSize={tile.isStart?19:12} dominantBaseline="middle">{tile.emoji}</text>}
+            <text x={px} y={tile.emoji?py+8:py} textAnchor="middle"
+              fontSize={tile.isStart?9:7.5} fill="white" dominantBaseline="middle"
+              fontFamily="'Crimson Text',Georgia,serif" fontStyle="italic">
+              {(tile.label||tile.id).length>14
+                ?(tile.label||tile.id).slice(0,12)+"…"
+                :(tile.label||tile.id)}
+            </text>
+            {!tile.isStart&&(
+              <text x={px} y={py+20} textAnchor="middle" fontSize={7}
+                fill={tile.category?CATEGORIES[tile.category]?.color+"99":"#666"}
+                fontFamily="'Space Mono',monospace">
+                {tile.category?CATEGORIES[tile.category]?.letter:""}
+                {tile.evalScore?" · "+tile.evalScore:""}
+              </text>
+            )}
+          </>
+        )}
+        {isAvail&&isLegal&&!tile&&(
+          <text x={px} y={adjN>=2?py-4:py} textAnchor="middle"
+            fontSize={adjN>=2?9:14} dominantBaseline="middle"
+            fill={glowC} opacity={adjN>=2?0.6:0.2}
+            fontFamily={adjN>=2?"'Space Mono',monospace":"inherit"}>
+            {adjN>=2?`×${adjN}`:`+`}
+          </text>
+        )}
+      </g>
+    );
+  }
+
+  const progress=Math.min(maxDepth/CHAIN_GOAL,1);
+  const displayHand=activeCat?hand.filter(w=>w.category===activeCat):hand;
+  const shownHand=displayHand.length?displayHand:hand;
+  const pendingNeighbourCats=pendingHex?.adjTiles?.filter(t=>!t.isStart).map(t=>t.category)??[];
+
+  // ══════════════════ INTRO ═════════════════════════════════════════════════
+  if(phase==="intro") return(
+    <div style={{minHeight:"100vh",background:"#06060f",display:"flex",flexDirection:"column",
+      alignItems:"center",justifyContent:"center",padding:"2rem",
+      fontFamily:"'Crimson Text',Georgia,serif",color:"#e8e0d0"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono:wght@400;700&display=swap');
+        *{box-sizing:border-box}
+        .sc{border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;cursor:pointer;
+          transition:all 0.2s;background:rgba(255,255,255,0.03);text-align:center}
+        .sc:hover{border-color:rgba(192,132,252,0.5);background:rgba(192,132,252,0.06);transform:translateY(-2px)}
+      `}</style>
+      <div style={{maxWidth:440,width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:22}}>
+          <div style={{fontSize:10,letterSpacing:"0.35em",color:"#C084FC",marginBottom:12,
+            fontFamily:"'Space Mono',monospace",textTransform:"uppercase"}}>A Semiotic Game</div>
+          <h1 style={{fontSize:40,fontWeight:600,margin:"0 0 4px",lineHeight:1.05}}>
+            The Logic<br/>of Signs
+          </h1>
+          <div style={{fontSize:14,color:"#444",fontStyle:"italic",marginBottom:14}}>After Roland Barthes</div>
+          <p style={{fontSize:14,lineHeight:1.7,color:"#777",marginBottom:12}}>
+            Choose a cultural object to analyse. Build a chain of connected concepts
+            outward from it — but every connection must make cultural sense, and you
+            must explain how each link works.
+          </p>
+
+          {/* How to play */}
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16,textAlign:"left"}}>
+            {[
+              ["🎯","Reach depth 6 from the centre to win"],
+              ["🔀","No two tiles of the same type can touch — meaning crosses between registers"],
+              ["💬","For every tile you place, explain how it connects"],
+              ["💀","Rejected tiles are gone permanently — think before you place"],
+            ].map(([icon,desc])=>(
+              <div key={desc} style={{display:"flex",gap:8,alignItems:"center",
+                background:"rgba(255,255,255,0.02)",borderRadius:8,padding:"7px 10px",
+                border:"1px solid rgba(255,255,255,0.05)"}}>
+                <span style={{fontSize:14,flexShrink:0}}>{icon}</span>
+                <span style={{fontSize:13,color:"#666",fontStyle:"italic"}}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:6,justifyContent:"center",marginBottom:18,flexWrap:"wrap"}}>
+            {Object.entries(CATEGORIES).map(([k,v])=>(
+              <div key={k} style={{display:"flex",alignItems:"center",gap:5,
+                border:`1px solid ${v.color}30`,borderRadius:20,padding:"3px 10px",
+                background:`${v.dark}18`}}>
+                <div style={{width:14,height:14,borderRadius:4,background:v.color+"22",
+                  border:`1px solid ${v.color}55`,display:"flex",alignItems:"center",
+                  justifyContent:"center",fontSize:8,color:v.color,
+                  fontFamily:"'Space Mono',monospace"}}>{v.letter}</div>
+                <span style={{fontSize:10,color:v.color,fontFamily:"'Space Mono',monospace"}}>{v.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {SIGN_LIST.map(s=>(
+            <div key={s.id} className="sc" onClick={()=>startGame(s)}>
+              <div style={{fontSize:32,marginBottom:6}}>{s.emoji}</div>
+              <div style={{fontSize:15,fontStyle:"italic",color:"#e8e0d0"}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ══════════════════ GAME ══════════════════════════════════════════════════
+  return(
+    <div style={{minHeight:"100vh",background:"#06060f",display:"flex",
+      flexDirection:"column",alignItems:"center",
+      fontFamily:"'Crimson Text',Georgia,serif",color:"#e8e0d0",paddingBottom:40}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono:wght@400;700&display=swap');
+        *{box-sizing:border-box}
+        .tc{border:1.5px solid transparent;border-radius:10px;padding:7px 8px;cursor:pointer;
+          transition:all 0.15s;background:rgba(255,255,255,0.04);text-align:center;
+          min-height:54px;display:flex;flex-direction:column;justify-content:center}
+        .tc:hover{transform:translateY(-2px);filter:brightness(1.2)}
+        .tc.sel{transform:translateY(-3px)}
+        .ct-btn{border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 12px;
+          cursor:pointer;transition:all 0.15s;background:rgba(255,255,255,0.03);
+          text-align:left;width:100%;font-family:'Crimson Text',Georgia,serif;
+          color:#bbb;font-size:14px;font-style:italic;line-height:1.4}
+        .ct-btn:hover{background:rgba(255,255,255,0.07);border-color:rgba(192,132,252,0.35);color:#e8e0d0}
+        .ct-btn.active{background:rgba(192,132,252,0.1);border-color:#C084FC;color:#C084FC;font-style:normal;font-weight:600}
+        .pulse{animation:pulse 1.4s infinite}
+        @keyframes pulse{0%,100%{opacity:0.35}50%{opacity:1}}
+        .si{animation:si 0.22s ease-out}
+        @keyframes si{from{transform:translateY(7px);opacity:0}to{transform:translateY(0);opacity:1}}
+        textarea{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+          border-radius:8px;color:#e8e0d0;font-family:'Crimson Text',Georgia,serif;
+          font-size:14px;padding:8px 10px;resize:none;width:100%;outline:none;font-style:italic}
+        textarea:focus{border-color:rgba(192,132,252,0.4)}
+        textarea::placeholder{color:#2e2e3e}
+      `}</style>
+
+      {/* Header */}
+      <div style={{width:"100%",maxWidth:480,padding:"10px 16px 3px",
+        display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:9,letterSpacing:"0.28em",color:"#C084FC",
+            fontFamily:"'Space Mono',monospace",textTransform:"uppercase"}}>The Logic of Signs</div>
+          <div style={{fontSize:12,color:"#444",fontStyle:"italic",marginTop:1}}>
+            {sign?.emoji} <span style={{color:"#ccc"}}>{sign?.label}</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:12}}>
+          {[{v:accepted,label:"PLACED",c:"#34D399"},{v:rejected,label:"LOST",c:"#EF4444"},{v:score,label:"SCORE",c:"#C084FC"}]
+            .map(({v,label,c})=>(
+            <div key={label} style={{textAlign:"center"}}>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:14,color:c}}>{v}</div>
+              <div style={{fontSize:8,color:"#333",letterSpacing:"0.05em"}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div style={{width:"calc(100% - 32px)",maxWidth:448,height:3,
+        background:"rgba(255,255,255,0.05)",borderRadius:4,margin:"4px 0 1px"}}>
+        <div style={{height:"100%",borderRadius:4,transition:"width 0.5s",
+          width:`${progress*100}%`,background:"linear-gradient(90deg,#C084FC,#FFD700)"}}/>
+      </div>
+      <div style={{fontSize:9,fontFamily:"'Space Mono',monospace",color:"#444",
+        letterSpacing:"0.07em",marginBottom:1}}>
+        DEPTH {maxDepth}/{CHAIN_GOAL} · <span style={{color:"#FFD700"}}>reach the gold ring</span> ·{" "}
+        <span style={{color:"#60A5FA"}}>×1→55</span>{" "}
+        <span style={{color:"#FB923C"}}>×2→65</span>{" "}
+        <span style={{color:"#EF4444"}}>×3→75</span>
+      </div>
+
+      {/* Chain display */}
+      {deepChainArr.length>1&&(
+        <div style={{width:"calc(100% - 32px)",maxWidth:448,marginBottom:2,
+          padding:"5px 10px",background:"rgba(255,215,0,0.03)",
+          border:"1px solid rgba(255,215,0,0.1)",borderRadius:8,
+          fontFamily:"'Space Mono',monospace",fontSize:9,color:"#FFD700",
+          letterSpacing:"0.06em",overflowX:"auto",whiteSpace:"nowrap"}}>
+          ✦ {chainLabel}
+        </div>
+      )}
+
+      {/* Board */}
+      <div style={{position:"relative",width:BW,height:BH}}>
+        <svg ref={svgRef} width={BW} height={BH}>
+          {renderChainLines()}
+          {ALL_HEXES.map(([q,r])=>renderHex(q,r))}
+        </svg>
+        {evaluating&&(
+          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",
+            justifyContent:"center",background:"rgba(6,6,15,0.75)"}}>
+            <div className="pulse" style={{fontStyle:"italic",color:"#C084FC",fontSize:14,
+              textAlign:"center",lineHeight:1.8}}>
+              Reading your connection…<br/>
+              <span style={{fontSize:10,color:"#444"}}>checking cultural logic</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Connection type panel */}
+      {pendingHex&&!evaluating&&(
+        <div className="si" style={{width:"calc(100% - 28px)",maxWidth:444,margin:"2px auto 6px",
+          border:"1px solid rgba(192,132,252,0.25)",borderRadius:12,padding:"12px 14px",
+          background:"rgba(192,132,252,0.04)"}}>
+
+          <div style={{fontSize:12,color:"#666",marginBottom:2}}>
+            Placing <strong style={{color:"#C084FC"}}>{selected?.label}</strong> next to{" "}
+            <strong style={{color:"#e8e0d0"}}>
+              {pendingHex.adjTiles.map(t=>t.label||t.id).join(" + ")}
+            </strong>
+          </div>
+          <div style={{fontSize:13,color:"#888",fontStyle:"italic",marginBottom:10}}>
+            How do these connect?
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+            {CONNECTION_TYPES.map(ct=>{
+              const isActive=connType===ct.id;
+              const fits=ct.good.some(([a,b])=>
+                (a===selected?.category&&pendingNeighbourCats.includes(b))||
+                (b===selected?.category&&pendingNeighbourCats.includes(a))
+              );
+              return(
+                <button key={ct.id} className={`ct-btn${isActive?" active":""}`}
+                  onClick={()=>setConnType(ct.id)}
+                  style={{
+                    borderColor:isActive?"#C084FC":fits?"rgba(52,211,153,0.3)":"rgba(255,255,255,0.08)",
+                  }}>
+                  {fits&&!isActive&&<span style={{fontSize:10,color:"#34D399",
+                    fontFamily:"'Space Mono',monospace",display:"block",
+                    marginBottom:2,letterSpacing:"0.04em"}}>✓ LIKELY FIT</span>}
+                  {ct.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <textarea rows={2} value={reasoning}
+            placeholder="Optional: say in your own words why these connect..."
+            onChange={e=>setReasoning(e.target.value)}/>
+
+          <div style={{display:"flex",gap:8,marginTop:8}}>
+            <button onClick={cancelPending} style={{flex:1,background:"transparent",
+              border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px",
+              color:"#444",fontSize:13,fontFamily:"'Crimson Text',Georgia,serif",cursor:"pointer"}}>
+              Cancel
+            </button>
+            <button onClick={submitConnection} disabled={!connType}
+              style={{flex:2,
+                background:connType?"linear-gradient(135deg,#7E22CE99,#1E3A8A99)":"rgba(255,255,255,0.03)",
+                border:connType?"1px solid rgba(192,132,252,0.3)":"1px solid rgba(255,255,255,0.06)",
+                borderRadius:8,padding:"8px",
+                color:connType?"#e8e0d0":"#2a2a3a",fontSize:13,
+                fontFamily:"'Crimson Text',Georgia,serif",
+                cursor:connType?"pointer":"not-allowed",fontStyle:"italic"}}>
+              {connType?"Confirm connection →":"Choose how they connect first"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback */}
+      {feedback&&!pendingHex&&(
+        <div className="si" style={{width:"calc(100% - 28px)",maxWidth:444,margin:"2px auto 6px",
+          border:`1px solid ${feedback.valid?"#34D39930":feedback.blocked?"#F59E0B30":"#EF444430"}`,
+          borderRadius:11,padding:"9px 12px",
+          background:feedback.valid?"rgba(52,211,153,0.04)":feedback.blocked?"rgba(245,158,11,0.04)":"rgba(239,68,68,0.05)"}}>
+          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+            <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,fontSize:12,
+              background:feedback.valid?"#34D399":feedback.blocked?"#F59E0B":"#EF4444",
+              display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {feedback.valid?"✓":feedback.blocked?"⊘":"✗"}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,lineHeight:1.5,fontStyle:"italic",marginBottom:3}}>
+                {feedback.briefFeedback}
+              </div>
+              {feedback.valid&&feedback.reasoningFeedback&&(
+                <div style={{fontSize:12,color:"#60A5FA",fontStyle:"italic",marginBottom:3}}>
+                  💬 {feedback.reasoningFeedback}
+                </div>
+              )}
+              {!feedback.valid&&!feedback.blocked&&feedback.rejectionType&&
+                REJECTION_TYPES[feedback.rejectionType]&&(()=>{
+                const rt=REJECTION_TYPES[feedback.rejectionType];
+                return(
+                  <div style={{display:"inline-flex",alignItems:"center",gap:4,marginBottom:3,
+                    background:`${rt.color}10`,border:`1px solid ${rt.color}30`,
+                    borderRadius:20,padding:"1px 8px"}}>
+                    <span style={{fontSize:10}}>{rt.icon}</span>
+                    <span style={{fontSize:9,color:rt.color,fontFamily:"'Space Mono',monospace",
+                      letterSpacing:"0.06em"}}>{rt.label}</span>
+                  </div>
+                );
+              })()}
+              {!feedback.valid&&!feedback.blocked&&(
+                <div style={{fontSize:10,color:"#c0392b",fontFamily:"'Space Mono',monospace",
+                  letterSpacing:"0.05em",marginBottom:3}}>
+                  ⬡ TILE LOST{feedback.wasTrap?" — this was a trap tile":""}
+                </div>
+              )}
+              <div style={{fontSize:11,color:"#3a3a52",fontStyle:"italic",lineHeight:1.5}}>
+                ❝ {feedback.barthesLink}
+              </div>
+              {feedback.valid&&(
+                <div style={{marginTop:3,fontFamily:"'Space Mono',monospace",fontSize:9,
+                  color:feedback.finalPts>=75?"#34D399":feedback.finalPts>=55?"#60A5FA":"#FB923C"}}>
+                  +{feedback.finalPts} pts
+                  {feedback.ctBonus>0?` (incl. +${feedback.ctBonus} for good reasoning)`:""}
+                  {feedback.ctBonus<0?` (incl. ${feedback.ctBonus} reasoning penalty)`:""}
+                  {" · threshold "}{feedback.threshold}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category filter */}
+      {!pendingHex&&(
+        <div style={{display:"flex",gap:5,marginBottom:5,padding:"0 12px",
+          flexWrap:"wrap",justifyContent:"center",width:"100%",maxWidth:480}}>
+          {[null,...Object.keys(CATEGORIES)].map(cat=>{
+            const info=cat?CATEGORIES[cat]:null;
+            const active=activeCat===cat;
+            const count=cat?hand.filter(w=>w.category===cat).length:hand.length;
+            return(
+              <button key={cat??"all"} onClick={()=>setActiveCat(cat)} style={{
+                border:`1px solid ${active?(info?.color??"#fff"):"rgba(255,255,255,0.09)"}`,
+                borderRadius:20,padding:"3px 10px",
+                background:active?(info?.dark??"rgba(255,255,255,0.06)")+"44":"transparent",
+                color:active?(info?.color??"#fff"):"#3a3a4a",
+                fontSize:9,fontFamily:"'Space Mono',monospace",cursor:"pointer",
+                display:"flex",gap:5,alignItems:"center"}}>
+                {cat&&<span style={{width:5,height:5,borderRadius:"50%",
+                  background:info?.color,display:"inline-block"}}/>}
+                {cat?info.label:"ALL"}
+                <span style={{color:active?(info?.color??"#fff"):"#2a2a3a"}}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Hand */}
+      {phase==="playing"&&!pendingHex&&(
+        <div style={{width:"100%",maxWidth:480,padding:"0 12px"}}>
+          <div style={{fontSize:11,textAlign:"center",marginBottom:5,fontStyle:"italic",
+            color:selected?"#60A5FA":"#252535",transition:"color 0.2s",lineHeight:1.4}}>
+            {selected
+              ?<><span style={{color:CATEGORIES[selected.category]?.color}}>
+                  [{CATEGORIES[selected.category]?.letter}]
+                </span>{" "}<strong style={{fontStyle:"normal"}}>{selected.label}</strong>
+                {" "}— tap a highlighted hex</>
+              :hand.length===0?"No tiles remain"
+              :"Select a tile, then tap a hex to place it"}
+          </div>
+
+          {hand.length===0?(
+            <div style={{textAlign:"center",padding:"14px 0"}}>
+              <div style={{fontSize:28,marginBottom:6}}>💀</div>
+              <div style={{fontSize:12,color:"#EF4444",fontFamily:"'Space Mono',monospace",
+                letterSpacing:"0.08em",marginBottom:5}}>HAND EXHAUSTED</div>
+              <p style={{fontSize:13,color:"#444",fontStyle:"italic",marginBottom:12}}>
+                Every tile was rejected. The myth could not be constructed.
+              </p>
+              <button onClick={()=>setPhase("intro")} style={{
+                background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",
+                borderRadius:10,padding:"8px 22px",color:"#EF4444",fontSize:13,
+                fontFamily:"'Crimson Text',Georgia,serif",cursor:"pointer"}}>
+                Choose a New Sign
+              </button>
+            </div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5}}>
+              {shownHand.map(word=>{
+                const cat=CATEGORIES[word.category];
+                const isSel=selected?.id===word.id;
+                return(
+                  <div key={word.id} className={`tc${isSel?" sel":""}`}
+                    onClick={()=>setSelected(isSel?null:word)}
+                    style={{
+                      border:`1.5px solid ${isSel?cat?.color:cat?.color+"28"}`,
+                      background:isSel?(cat?.dark+"55"):"rgba(255,255,255,0.03)",
+                      outline:word.trap?"1px solid rgba(239,68,68,0.12)":"none"}}>
+                    <div style={{display:"flex",justifyContent:"center",alignItems:"center",
+                      gap:3,marginBottom:2}}>
+                      <div style={{width:13,height:13,borderRadius:3,background:cat?.color+"22",
+                        border:`1px solid ${cat?.color}44`,display:"flex",alignItems:"center",
+                        justifyContent:"center",fontSize:7,color:cat?.color,
+                        fontFamily:"'Space Mono',monospace"}}>{cat?.letter}</div>
+                      <div style={{fontSize:8,color:cat?.color+"88",
+                        fontFamily:"'Space Mono',monospace"}}>{cat?.label}</div>
+                    </div>
+                    <div style={{fontSize:12,fontStyle:"italic",lineHeight:1.25}}>{word.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Complete */}
+      {phase==="complete"&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(6,6,15,0.97)",
+          display:"flex",flexDirection:"column",alignItems:"center",
+          justifyContent:"center",padding:32,zIndex:100}}>
+          <div style={{fontSize:46,marginBottom:10}}>✦</div>
+          <div style={{fontSize:9,letterSpacing:"0.35em",color:"#FFD700",marginBottom:10,
+            fontFamily:"'Space Mono',monospace"}}>MYTH CONSTRUCTED</div>
+          <h2 style={{fontSize:26,margin:"0 0 8px",textAlign:"center",lineHeight:1.2}}>
+            The chain is complete
+          </h2>
+          <div style={{fontSize:11,color:"#FFD700",fontFamily:"'Space Mono',monospace",
+            marginBottom:8,textAlign:"center",letterSpacing:"0.05em",
+            maxWidth:360,lineHeight:1.7,overflowWrap:"break-word"}}>
+            {chainLabel}
+          </div>
+          <p style={{fontSize:14,color:"#555",fontStyle:"italic",textAlign:"center",
+            maxWidth:300,marginBottom:8,lineHeight:1.6}}>
+            You traced a cultural argument {CHAIN_GOAL} connections deep from{" "}
+            <strong style={{color:"#ddd"}}>{sign?.emoji} {sign?.label}</strong>.
+          </p>
+          <div style={{display:"flex",gap:20,marginBottom:26,marginTop:6}}>
+            {[{v:score,label:"SCORE",c:"#C084FC"},{v:accepted,label:"PLACED",c:"#34D399"},{v:rejected,label:"LOST",c:"#EF4444"}]
+              .map(({v,label,c})=>(
+              <div key={label} style={{textAlign:"center"}}>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:22,color:c}}>{v}</div>
+                <div style={{fontSize:8,color:"#333"}}>{label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>startGame(sign)} style={{
+              background:"rgba(192,132,252,0.1)",border:"1px solid rgba(192,132,252,0.3)",
+              borderRadius:10,padding:"10px 22px",color:"#C084FC",fontSize:14,
+              fontFamily:"'Crimson Text',Georgia,serif",cursor:"pointer"}}>
+              Play Again
+            </button>
+            <button onClick={()=>setPhase("intro")} style={{
+              background:"linear-gradient(135deg,#C084FC,#FFD700)",border:"none",
+              borderRadius:10,padding:"10px 22px",color:"#fff",fontSize:14,
+              fontFamily:"'Crimson Text',Georgia,serif",cursor:"pointer",fontWeight:600}}>
+              New Sign
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BarthesGame />);
+  </script>
+</body>
+</html>
