@@ -4,18 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Logic of Signs</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #06060f; min-height: 100vh; }
+    body { background: #06060f; }
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" data-presets="react">
+  <script type="text/babel">
     const { useState, useRef } = React;
+
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CHAIN_GOAL = 6;
@@ -281,126 +283,103 @@ function connectionTypeBonus(connId,candidateCat,neighbourCats){
   return -8;
 }
 
-// ─── AI evaluation (via backend proxy) ───────────────────────────────────────
-async function evaluateConnection({
-  sign,
-  chainPath,
-  neighbours,
-  candidate,
-  adjCount,
-  candidateTile,
-  connType,
-  studentReasoning
-}) {
-  const threshold = adjCount >= 3 ? 75 : adjCount === 2 ? 65 : 55;
+// ─── AI evaluation ────────────────────────────────────────────────────────────
+// API key — set via the key entry screen on first load
+let ANTHROPIC_API_KEY = "";
 
-  const pathStr = chainPath.length
-    ? chainPath.join(" → ")
-    : `${sign.label} (origin)`;
+async function evaluateConnection({sign,chainPath,neighbours,candidate,adjCount,candidateTile,connType,studentReasoning}){
+  const threshold=adjCount>=3?75:adjCount===2?65:55;
+  const pathStr=chainPath.length?chainPath.join(" → "):`${sign.label} (origin)`;
+  const neighStr=neighbours.join(" AND ");
+  const ct=CONNECTION_TYPES.find(c=>c.id===connType);
+  const candidateCatLabel=candidateTile?.category?CATEGORIES[candidateTile.category]?.label||candidateTile.category:"unknown";
+  const trapHint=candidateTile?.trap
+    ?`\n\nNOTE — TRAP TILE: This tile is known to be problematic for this sign. Likely failure reason: "${candidateTile.trapReason}". Be especially rigorous.`:"";
 
-  const neighStr = neighbours.join(" AND ");
+  const prompt=`You are a rigorous but approachable critic in an educational game about cultural meaning, designed for undergraduate students who are new to semiotics. Your job is to evaluate whether a student's tile placement makes cultural sense. Your default is to REJECT — only accept connections that genuinely extend the argument.
 
-  const ct = CONNECTION_TYPES.find(c => c.id === connType);
+SIGN BEING ANALYSED: "${sign.label}"
 
-  const trapHint = candidateTile?.trap
-    ? `NOTE — TRAP TILE: ${candidateTile.trapReason}`
-    : "";
-
-  const prompt = `
-You are a rigorous but approachable critic in an educational semiotics game.
-
-SIGN: "${sign.label}"
-
-BRIEFING:
+BRIEFING — what this sign's cultural mythology is about:
 ${sign.briefing}
-
 ${trapHint}
 
-CHAIN SO FAR:
-${pathStr}
+CURRENT STATE:
+- Chain built so far: ${pathStr}
+- Tile being placed: "${candidate}"
+- Adjacent tiles on the board: ${neighStr}
+- Number of adjacent tiles: ${adjCount} (passing threshold: ${threshold}/100)
 
-CANDIDATE TILE:
-"${candidate}"
+STUDENT'S EXPLANATION:
+- Relationship type chosen: "${ct?.label}" (meaning: ${ct?.hint})
+- Student's own words: "${studentReasoning||"(not provided)"}"
 
-ADJACENT TO:
-${neighStr}
+EVALUATE whether "${candidate}" works here. Check ALL THREE:
 
-RELATIONSHIP TYPE:
-${ct?.label} — ${ct?.hint}
+1. LOCAL CONNECTION — does "${candidate}" connect culturally to each adjacent tile (${neighStr})? Not just a surface association — is there a genuine shared cultural meaning or logic? Consult the briefing's REJECT list.
 
-STUDENT REASONING:
-${studentReasoning || "(none given)"}
+2. CHAIN COHERENCE — does "${candidate}" fit the direction of the chain so far (${pathStr})? Or does it pull the argument into a different cultural world?
 
-Evaluate:
-1. Local connection
-2. Chain coherence
-3. Stays about the sign
+3. STAYS ABOUT THE SIGN — does this tile keep the chain as an argument about "${sign.label}"? If you placed this tile in an essay about "${sign.label}", would it make sense?
 
-Return ONLY valid JSON:
+ALSO EVALUATE THE STUDENT'S REASONING:
+- Did they choose a relationship type that makes sense for the categories involved?
+- Do their own words show they understand why these concepts connect culturally — or are they just describing surface proximity?
+- Superficial reasoning (e.g. "they both involve exercise") should score lower than cultural reasoning (e.g. "Discipline frames the workout as a moral obligation rather than a choice").
 
+Score the CONNECTION (0-100) and the REASONING (0-100) separately.
+Poor reasoning (below 50) reduces the final score by up to 15 points but does NOT make an otherwise valid tile invalid.
+
+Write feedback in plain, encouraging language — no jargon. If rejecting, be specific about which of the three conditions failed and why, in terms a first-year student would understand.
+
+Classify any rejection: "wrong_register"|"too_literal"|"too_abstract"|"breaks_chain"|"not_mythological"
+
+Respond ONLY in valid JSON:
 {
-  "connectionScore": number,
-  "reasoningScore": number,
-  "briefFeedback": "string <=25 words",
-  "reasoningFeedback": "string <=25 words",
-  "barthesLink": "string <=30 words",
-  "rejectionType": "wrong_register|too_literal|too_abstract|breaks_chain|not_mythological|null"
-}
-`;
+  "connectionScore": <0-100>,
+  "reasoningScore": <0-100>,
+  "valid": <true only if connectionScore >= ${threshold}>,
+  "briefFeedback": "<1 sentence ≤25 words — what worked or specifically why it fails>",
+  "reasoningFeedback": "<1 sentence ≤25 words — quality of reasoning, what to think more carefully about>",
+  "barthesLink": "<1 accessible sentence connecting to a Barthes idea, ≤30 words>",
+  "rejectionType": "<key or null if valid>"
+}`;
 
-  try {
-    // 🔁 Calls your backend instead of Anthropic directly
-    const res = await fetch("/api/evaluate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt })
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:500,
+        messages:[{role:"user",content:prompt}],
+      }),
     });
-
-    if (!res.ok) throw new Error("Server error");
-
-    const data = await res.json();
-
-    const connectionScore = Number(data.connectionScore ?? 0);
-    const reasoningScore  = Number(data.reasoningScore ?? 0);
-
-    const valid = connectionScore >= threshold;
-
-    const reasonMod =
-      reasoningScore >= 75 ? 5 :
-      reasoningScore >= 50 ? 0 :
-      -15;
-
-    const finalScore = Math.max(
-      0,
-      Math.min(100, connectionScore + reasonMod)
-    );
-
-    return {
-      connectionScore,
-      reasoningScore,
-      valid,
-      threshold,
-      finalScore,
-      briefFeedback: data.briefFeedback || "",
-      reasoningFeedback: data.reasoningFeedback || "",
-      barthesLink: data.barthesLink || "",
-      rejectionType: valid ? null : data.rejectionType || "not_mythological"
-    };
-
-  } catch (err) {
-    console.error("Evaluation failed:", err);
-
-    // 🛟 Graceful fallback so the game doesn't break
-    return {
-      connectionScore: 60,
-      reasoningScore: 60,
-      valid: true,
-      threshold,
-      finalScore: 60,
-      briefFeedback: "Connection provisionally accepted (AI unavailable).",
-      reasoningFeedback: "Could not evaluate reasoning this turn.",
-      barthesLink: "Myths form through structured cultural relationships.",
-      rejectionType: null
+    if(!res.ok){
+      const err=await res.json().catch(()=>({error:{message:"Unknown error"}}));
+      throw new Error(err?.error?.message||`API error ${res.status}`);
+    }
+    const data=await res.json();
+    const text=data.content?.[0]?.text||"";
+    const clean=text.replace(/```json|```/g,"").trim();
+    const p=JSON.parse(clean);
+    p.valid=p.connectionScore>=threshold;
+    const reasonMod=p.reasoningScore>=75?5:p.reasoningScore>=50?0:-15;
+    p.finalScore=Math.max(0,Math.min(100,(p.connectionScore||0)+reasonMod));
+    return{...p,threshold};
+  }catch(err){
+    console.error("API error:",err);
+    return{
+      connectionScore:30,reasoningScore:0,valid:false,threshold,finalScore:30,
+      briefFeedback:`Connection check failed: ${err.message||"try again"}.`,
+      reasoningFeedback:"Could not evaluate reasoning.",
+      barthesLink:"Signs take on meaning through the cultural systems they belong to.",
+      rejectionType:"not_mythological",
     };
   }
 }
@@ -432,8 +411,8 @@ const ALL_HEXES=[];
 for(let q=-R;q<=R;q++)for(let r=-R;r<=R;r++)if(isInGrid(q,r))ALL_HEXES.push([q,r]);
 
 // ═══════════════════════════════════════════════════════════════════════════════
-function BarthesGame(){
-  const[phase,setPhase]         =useState("intro");
+export default function BarthesGame(){
+  const[phase,setPhase]         =useState("apikey");
   const[sign,setSign]           =useState(null);
   const[placed,setPlaced]       =useState({});
   const[hand,setHand]           =useState([]);
@@ -661,6 +640,46 @@ function BarthesGame(){
   const displayHand=activeCat?hand.filter(w=>w.category===activeCat):hand;
   const shownHand=displayHand.length?displayHand:hand;
   const pendingNeighbourCats=pendingHex?.adjTiles?.filter(t=>!t.isStart).map(t=>t.category)??[];
+
+  // ══════════════════ API KEY ENTRY ════════════════════════════════════════
+  if(phase==="apikey") return(
+    <div style={{minHeight:"100vh",background:"#06060f",display:"flex",flexDirection:"column",
+      alignItems:"center",justifyContent:"center",padding:"2rem",
+      fontFamily:"'Crimson Text',Georgia,serif",color:"#e8e0d0"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono:wght@400;700&display=swap');*{box-sizing:border-box}`}</style>
+      <div style={{maxWidth:380,width:"100%",textAlign:"center"}}>
+        <div style={{fontSize:10,letterSpacing:"0.35em",color:"#C084FC",marginBottom:14,
+          fontFamily:"'Space Mono',monospace",textTransform:"uppercase"}}>The Logic of Signs</div>
+        <h1 style={{fontSize:36,fontWeight:600,margin:"0 0 6px",lineHeight:1.1}}>API Key Required</h1>
+        <p style={{fontSize:14,color:"#666",fontStyle:"italic",lineHeight:1.7,marginBottom:24}}>
+          This game uses the Anthropic API to evaluate your connections.
+          Enter your API key below — it stays in memory only and is never stored or sent anywhere except Anthropic.
+        </p>
+        <input
+          type="password"
+          placeholder="sk-ant-..."
+          defaultValue=""
+          id="apikey-input"
+          style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)",
+            borderRadius:10,padding:"12px 14px",color:"#e8e0d0",fontSize:14,
+            fontFamily:"'Space Mono',monospace",outline:"none",marginBottom:12}}
+        />
+        <button onClick={()=>{
+          const key=document.getElementById("apikey-input").value.trim();
+          if(!key){alert("Please enter an API key.");return;}
+          ANTHROPIC_API_KEY=key;
+          setPhase("intro");
+        }} style={{width:"100%",background:"linear-gradient(135deg,#C084FC,#60A5FA)",
+          border:"none",borderRadius:10,padding:"13px",color:"#fff",fontSize:16,
+          fontFamily:"'Crimson Text',Georgia,serif",cursor:"pointer",fontWeight:600,marginBottom:10}}>
+          Continue →
+        </button>
+        <p style={{fontSize:11,color:"#333",fontStyle:"italic"}}>
+          Get a key at console.anthropic.com · Claude Sonnet is used for evaluation
+        </p>
+      </div>
+    </div>
+  );
 
   // ══════════════════ INTRO ═════════════════════════════════════════════════
   if(phase==="intro") return(
@@ -1080,9 +1099,9 @@ function BarthesGame(){
   );
 }
 
-    const domContainer = document.getElementById('root');
-    const reactRoot = ReactDOM.createRoot(domContainer);
-    reactRoot.render(React.createElement(BarthesGame));
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BarthesGame />);
   </script>
 </body>
 </html>
